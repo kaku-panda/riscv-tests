@@ -25,63 +25,63 @@ class RISCVSimulator:
     def write_memory(self, address, value, num_bytes):
         self.memory[address:address+num_bytes] = value.to_bytes(num_bytes, byteorder='little')
 
+    def read_register(self, index):
+        n = self.registers[index] & 0xFFFFFFFF
+        return (n ^ 0x80000000) - 0x80000000
 
     def decode_instruction(self, instruction):
         return self.decoder.decode_instruction(instruction)
 
     def execute_instruction(self, instruction):
-        if instruction.name not in ["BEQ", "BNE", "BLT", "BGE", "BLTU", "BGEU", "JAL", "JALR"]:
-            self.pc += 4
-    
+
         if instruction.name in ["ADD", "SUB", "SLL", "SLT", "SLTU", "XOR", "SRL", "SRA", "OR", "AND"]:
             if instruction.name == "ADD":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] + self.registers[instruction.arg3]
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) + self.read_register(instruction.arg3)
             elif instruction.name == "SUB":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] - self.registers[instruction.arg3]
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) - self.read_register(instruction.arg3)
             elif instruction.name == "SLL":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] << (self.registers[instruction.arg3] & 0x1F)
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) << (self.read_register(instruction.arg3) & 0x1F)
             elif instruction.name == "SLT":
-                self.registers[instruction.arg1] = int(self.registers[instruction.arg2] < self.registers[instruction.arg3])
+                self.registers[instruction.arg1] = int(self.read_register(instruction.arg2) < self.read_register(instruction.arg3))
             elif instruction.name == "SLTU":
-                self.registers[instruction.arg1] = int((self.registers[instruction.arg2] & 0xFFFFFFFF) < (self.registers[instruction.arg3] & 0xFFFFFFFF))
+                self.registers[instruction.arg1] = int((self.read_register(instruction.arg2) & 0xFFFFFFFF) < (self.read_register(instruction.arg3) & 0xFFFFFFFF))
             elif instruction.name == "XOR":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] ^ self.registers[instruction.arg3]
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) ^ self.read_register(instruction.arg3)
             elif instruction.name == "SRL":
-                self.registers[instruction.arg1] = (self.registers[instruction.arg2] & 0xFFFFFFFF) >> (self.registers[instruction.arg3] & 0x1F)
+                self.registers[instruction.arg1] = (self.read_register(instruction.arg2) & 0xFFFFFFFF) >> (self.read_register(instruction.arg3) & 0x1F)
             elif instruction.name == "SRA":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] >> (self.registers[instruction.arg3] & 0x1F)
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) >> (self.read_register(instruction.arg3) & 0x1F)
             elif instruction.name == "OR":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] | self.registers[instruction.arg3]
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) | self.read_register(instruction.arg3)
             elif instruction.name == "AND":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] & self.registers[instruction.arg3]
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) & self.read_register(instruction.arg3)
         
         # I型命令の処理
         elif instruction.name in ["ADDI", "SLTI", "SLTIU", "XORI", "ORI", "ANDI", "SLLI", "SRLI"]:
             if instruction.name == "ADDI":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] + instruction.arg3
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) + instruction.arg3
             elif instruction.name == "SLTI":
-                self.registers[instruction.arg1] = int(self.registers[instruction.arg2] < instruction.arg3)
+                self.registers[instruction.arg1] = int(self.read_register(instruction.arg2) < instruction.arg3)
             elif instruction.name == "SLTIU":
-                self.registers[instruction.arg1] = int((self.registers[instruction.arg2] & 0xFFFFFFFF) < (instruction.arg3 & 0xFFFFFFFF))
+                self.registers[instruction.arg1] = int((self.read_register(instruction.arg2) & 0xFFFFFFFF) < (instruction.arg3 & 0xFFFFFFFF))
             elif instruction.name == "XORI":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] ^ instruction.arg3
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) ^ instruction.arg3
             elif instruction.name == "ORI":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] | instruction.arg3
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) | instruction.arg3
             elif instruction.name == "ANDI":
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] & instruction.arg3
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) & instruction.arg3
             elif instruction.name == "SLLI":
-                shamt = instruction.arg3 & 0x1F  # シフト量は5ビットでマスク
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] << shamt
+                shamt = instruction.arg3 & 0x1F
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) << shamt
             elif instruction.name == "SRLI":
-                shamt = instruction.arg3 & 0x1F  # シフト量は5ビットでマスク
-                self.registers[instruction.arg1] = (self.registers[instruction.arg2] & 0xFFFFFFFF) >> shamt
+                shamt = instruction.arg3 & 0x1F 
+                self.registers[instruction.arg1] = (self.read_register(instruction.arg2) & 0xFFFFFFFF) >> shamt
             elif instruction.name == "SRAI":
-                shamt = instruction.arg3 & 0x1F  # シフト量は5ビットでマスク
-                self.registers[instruction.arg1] = self.registers[instruction.arg2] >> shamt
+                shamt = instruction.arg3 & 0x1F
+                self.registers[instruction.arg1] = self.read_register(instruction.arg2) >> shamt
 
-        
         elif instruction.name in ["LB", "LH", "LW", "LBU", "LHU"]:
-            address = self.registers[instruction.arg2] + instruction.arg3
+            address = self.read_register(instruction.arg2) + instruction.arg3
             if instruction.name == "LB":
                 value = self.read_memory(address, 1, signed=True)
             elif instruction.name == "LH":
@@ -96,8 +96,8 @@ class RISCVSimulator:
 
         # S型命令の処理
         elif instruction.name in ["SB", "SH", "SW"]:
-            address = self.registers[instruction.arg2] + instruction.arg3
-            value = self.registers[instruction.arg1]
+            address = self.read_register(instruction.arg2) + instruction.arg3
+            value = self.read_register(instruction.arg1)
             if instruction.name == "SB":
                 self.write_memory(address, value, 1)
             elif instruction.name == "SH":
@@ -107,8 +107,8 @@ class RISCVSimulator:
         
         # B型命令の処理
         elif instruction.name in ["BEQ", "BNE", "BLT", "BGE", "BLTU", "BGEU"]:
-            rs1_val = self.registers[instruction.arg1]
-            rs2_val = self.registers[instruction.arg2]
+            rs1_val: int = self.read_register(instruction.arg1)
+            rs2_val: int = self.read_register(instruction.arg2)
             offset = instruction.arg3
 
             if instruction.name == "BEQ" and rs1_val == rs2_val:
@@ -123,6 +123,8 @@ class RISCVSimulator:
                 self.pc += offset
             elif instruction.name == "BGEU" and (rs1_val & 0xFFFFFFFF) >= (rs2_val & 0xFFFFFFFF):
                 self.pc += offset
+            else:
+                self.pc += 4
         
         # U型命令の処理
         elif instruction.name in ["LUI", "AUIPC"]:
@@ -138,27 +140,35 @@ class RISCVSimulator:
                 self.pc += instruction.arg2
             elif instruction.name == "JALR":
                 temp_pc = self.pc
-                self.pc = (self.registers[instruction.arg2] + instruction.arg3) & ~1
+                self.pc = (self.read_register(instruction.arg2) + instruction.arg3) & ~1
                 self.registers[instruction.arg1] = temp_pc + 4
         
         elif instruction.name in ["FENCE", "FENCE.I", "ECALL", "EBREAK", "MRET", "CSRRW", "CSRRS", "CSRRC", "CSRRWI", "CSRRSI","CSRRCI"]:
-            pass
+            if instruction.name == "CSRRS":
+                self.registers[instruction.arg1] = 0x0
         else:
             print(f"Unsupported instruction: {instruction}")
 
+        if instruction.name not in ["BEQ", "BNE", "BLT", "BGE", "BLTU", "BGEU", "JAL", "JALR"]:
+            self.pc += 4
+    
         self.registers[0] = 0
 
     def run(self):
         while True:
-            if self.pc == 0x800000d0:
-                break;
             instruction = self.fetch_instruction()
             if instruction is None:
                 break
             decoded_instruction = self.decode_instruction(instruction)
             print(f"PC: {hex(self.pc)}, Instruction: {decoded_instruction} ({hex(instruction)})")
             self.execute_instruction(decoded_instruction)
-        print(self.registers)
+            
+            for i in range(0, len(self.registers), 8):
+                reg_line = " ".join(f"x{j:2}:{reg & 0xFFFFFFFF:08x}" for j, reg in enumerate(self.registers[i:i+8]))
+                print(reg_line)
+
+
+
         print(self.memory[:32])
 
 def extract_instructions_from_dump(dump_file_path):
